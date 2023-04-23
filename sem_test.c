@@ -12,12 +12,14 @@
 //-----------------------------------------------------------------------------
 #define MAX_I2C_BUS         14
 #define I2C_SEM_KEY		    "skeyi2c-%d"
-#define	MAX_SKEY_LEN	16
+#define	MAX_SKEY_LEN	    16
+#define	LOOP_NUMBER	        10
 //gcc -o sem_test sem_test.c -lpthread
 //-----------------------------------------------------------------------------
 typedef unsigned char  INT8U;
 void sem_wait_i2c(INT8U bus);
 void sem_post_i2c(INT8U bus);
+int Index = 0;
 
 //-----------------------------------------------------------------------------
 void sem_wait_i2c(INT8U bus)
@@ -58,33 +60,33 @@ void sem_post_i2c(INT8U bus)
 
 // child pthread
 void* child(void* data) {
-    int i, count = 0,nloop = 15;
+    int i, count = 0;
     INT8U bus = 1;    
-    for (i = 0; i < nloop; i++) {
+    for (i = 0; i < LOOP_NUMBER; i++) {
         sem_wait_i2c(bus);
-        //usleep(300);
-        printf("child leaving critical section c-%d\n", i);
+        usleep(300);
+        printf("child leaving critical section c-%d Index=%d\n", i, ++Index);
         sem_post_i2c(bus);
-        //usleep(300);
+        usleep(300);
     }
     pthread_exit(NULL); // exit child pthread
 }
 
 // main
 int pthreadmain(void) {
-    int i, count = 0,nloop = 15;
+    int i, count = 0;
     INT8U bus = 1;        
     pthread_t t; // declare pthread variable
     pthread_create(&t, NULL, child, "Child"); // create child pthread
 
     // main pthread 
-    for (i = 0; i < nloop; i++) {
+    for (i = 0; i < LOOP_NUMBER; i++) {
         sem_wait_i2c(bus);
         //usleep(30*1000);
-        sleep(1);
-        printf("parent leaving critical section p-%d\n", i);
+        usleep(300);
+        printf("parent leaving critical section p-%d Index=%d\n", i, ++Index);
         sem_post_i2c(bus);
-        //usleep(1);
+        usleep(300);
     }
 
     pthread_join(t, NULL); // Wait for child thread execution to complete
@@ -93,16 +95,16 @@ int pthreadmain(void) {
 
 
 int mainfork(void) {
-    int i, count = 0,nloop = 15;
+    int i, count = 0;
     INT8U bus = 1;
     pid_t pid;
     pid = fork();
 
     if (pid == 0) { // child process
-        for (i = 0; i < nloop; i++) {
+        for (i = 0; i < LOOP_NUMBER; i++) {
             sem_wait_i2c(bus);
             usleep(300);
-            printf("child leaving critical section c-%d\n", i);
+            printf("child leaving critical section c-%d Index=%d\n", i, ++Index);
             sem_post_i2c(bus);
             usleep(300);
         }
@@ -110,10 +112,10 @@ int mainfork(void) {
     }
 
     // back to parent process
-    for (i = 0; i < nloop; i++) {
+    for (i = 0; i < LOOP_NUMBER; i++) {
         sem_wait_i2c(bus);
         usleep(300);
-        printf("parent leaving critical section p-%d\n", i);
+        printf("parent leaving critical section p-%d Index=%d\n", i, ++Index);
         sem_post_i2c(bus);
         //usleep(1);
     }
